@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+instance/
+intent_recognition.db
+test_api.py
+check_data.py
+check_intents.py
+cleanup.py
+create_cpp_intent.py
+fix_cpp_intent.py
+update_cpp_intent.py
+view_database.py
+test_create_intent_api.py
+test_create_test_intents.py
+test_delete_intent_api.py
+test_delete_scene_api.py
+test_edit_intent_api.py
+test_intent_recognition.py
+test_specific_intent_recognition.py
+test_cpp_intent_recognition.py
+
+# Flask Session
+flask_session/

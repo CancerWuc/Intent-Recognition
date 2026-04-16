@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体管理 - 意图识别系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            background: #1B2537;
+            color: white;
+            padding-top: 24px;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+        .sidebar h3 {
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+        }
+        .sidebar a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            display: block;
+            padding: 12px 24px;
+            margin: 2px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .sidebar a:hover {
+            background-color: rgba(255,255,255,0.06);
+            color: white;
+        }
+        .content {
+            margin-left: 240px;
+            padding: 32px;
+            background-color: #F7F8FA;
+            min-height: 100vh;
+        }
+        .active {
+            background-color: rgba(196, 18, 48, 0.15);
+            color: #F87171;
+            border-left: 3px solid #C41230;
+            border-radius: 0 6px 6px 0;
+            margin-left: 0;
+            padding-left: 21px;
+            font-weight: 500;
+        }
+        .header-section {
+            background: white;
+            padding: 28px 32px;
+            border-radius: 8px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 15px;
+            font-size: 1.75rem;
+        }
+        .lead {
+            color: #6B7280;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #E8EAED;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .keyword-tag {
+            display: inline-block;
+            background-color: #FEF2F2;
+            color: #9E0F28;
+            border-radius: 4px;
+            padding: 3px 10px;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .example-tag {
+            display: inline-block;
+            background-color: #F3F4F6;
+            border-radius: 4px;
+            padding: 3px 10px;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .prompt-preview {
+            background-color: #F7F8FA;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            white-space: pre-wrap;
+            border-left: 3px solid #C41230;
+            font-size: 13px;
+        }
+        .btn-primary {
+            background: #C41230;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: #A0102A;
+            box-shadow: 0 2px 8px rgba(196, 18, 48, 0.2);
+        }
+        .btn-outline-primary {
+            border: 1px solid #C41230;
+            color: #C41230;
+            background: transparent;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-primary:hover {
+            background: #C41230;
+            color: white;
+            border-color: #C41230;
+        }
+        .table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #E8EAED;
+        }
+        .table thead {
+            background: #1B2537;
+            color: white;
+        }
+        .table thead th {
+            padding: 14px 16px;
+            font-weight: 500;
+            border: none;
+            font-size: 14px;
+        }
+        .table tbody td {
+            padding: 14px 16px;
+            border-top: 1px solid #F3F4F6;
+            font-size: 14px;
+        }
+        .table tbody tr:hover {
+            background-color: #FAFBFC;
+        }
+        .action-group {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .action-group a {
+            color: #6B7280;
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+        .action-group a:hover {
+            color: #C41230;
+        }
+        .action-group a+a {
+            position: relative;
+        }
+        .action-group a+a::before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 12px;
+            background: #D1D5DB;
+        }
+        .modal-content {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .modal-header {
+            background: #1B2537;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        .form-control {
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-control:focus {
+            border-color: #C41230;
+            box-shadow: 0 0 0 3px rgba(196, 18, 48, 0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="text-center mb-4">管理后台</h3>
+        <a href="index.html">首页</a>
+        <a href="multi-agents.html">多智能体管理</a>
+        <a href="scene-intent.html">场景和意图管理</a>
+        <a href="agents.html" class="active">智能体管理</a>
+        <a href="debug.html">意图识别调试</a>
+        <a href="../index.html">用户端</a>
+    </div>
+    
+    <div class="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>智能体管理</h1>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAgentModal">
+                创建智能体
+            </button>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>名称</th>
+                            <th>描述</th>
+                            <th>能力</th>
+                            <th>来源</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agentTableBody">
+                        <!-- 智能体列表将通过JavaScript动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 创建智能体模态框 -->
+    <div class="modal fade" id="createAgentModal" tabindex="-1" aria-labelledby="createAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createAgentModalLabel">创建智能体</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createAgentForm">
+                        <div class="mb-3">
+                            <label for="agentId" class="form-label">智能体ID</label>
+                            <input type="text" class="form-control" id="agentId" placeholder="自动生成">
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentName" class="form-label">智能体名称 *</label>
+                            <input type="text" class="form-control" id="agentName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentDescription" class="form-label">智能体描述</label>
+                            <textarea class="form-control" id="agentDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3" id="PromptField">
+                            <label for="agentPrompt" class="form-label">提示词</label>
+                            <textarea class="form-control" id="agentPrompt" rows="5" placeholder="请输入智能体的提示词"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">能力</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="agentCapabilityInput" placeholder="输入能力">
+                                <button type="button" class="btn btn-outline-secondary" onclick="addAgentCapability()">添加</button>
+                            </div>
+                            <div id="agentCapabilityList" class="mt-2"></div>
+                            <input type="hidden" id="agentCapabilities" value="[]">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">调用模式 *</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="callMode" id="CallModeExternal" value="external_model" checked onchange="toggleCallMode('')">
+                                    <label class="form-check-label" for="CallModeExternal">外部模型 API</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="callMode" id="CallModeHiAgent" value="hi_agent" onchange="toggleCallMode('')">
+                                    <label class="form-check-label" for="CallModeHiAgent">内部 hi-agent 平台</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ExternalModelFields">
+                            <div class="mb-3">
+                                <label for="agentApiKey" class="form-label">API Key <span class="text-muted">(留空使用全局默认)</span></label>
+                                <input type="password" class="form-control" id="agentApiKey" placeholder="留空使用全局 API Key">
+                            </div>
+                            <div class="mb-3">
+                                <label for="agentModelName" class="form-label">模型名称 <span class="text-muted">(留空使用默认模型)</span></label>
+                                <input type="text" class="form-control" id="agentModelName" placeholder="例如 Qwen/Qwen3-8B">
+                            </div>
+                            <div class="mb-3">
+                                <label for="agentMaxTokens" class="form-label">最大输出 Token 数 <span class="text-muted">(默认 1000)</span></label>
+                                <input type="number" class="form-control" id="agentMaxTokens" placeholder="1000" value="1000">
+                            </div>
+                        </div>
+                        <div id="HiAgentFields" style="display:none;">
+                            <div class="mb-3">
+                                <label for="agentHiApiUrl" class="form-label">API URL *</label>
+                                <input type="text" class="form-control" id="agentHiApiUrl" placeholder="https://your-hi-agent/api/v1/chat/completions">
+                            </div>
+                            <div class="mb-3">
+                                <label for="agentHiApiKey" class="form-label">API Key *</label>
+                                <input type="password" class="form-control" id="agentHiApiKey">
+                            </div>
+                            <div class="mb-3">
+                                <label for="agentHiAgentId" class="form-label">Agent ID *</label>
+                                <input type="text" class="form-control" id="agentHiAgentId" placeholder="hi-agent 平台中的 Agent ID">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreateAgent()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑智能体模态框 -->
+    <div class="modal fade" id="editAgentModal" tabindex="-1" aria-labelledby="editAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAgentModalLabel">编辑智能体</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAgentForm">
+                        <input type="hidden" id="editAgentId">
+                        <div class="mb-3">
+                            <label for="editAgentIdInput" class="form-label">智能体ID</label>
+                            <input type="text" class="form-control" id="editAgentIdInput" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAgentName" class="form-label">智能体名称 *</label>
+                            <input type="text" class="form-control" id="editAgentName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAgentDescription" class="form-label">智能体描述</label>
+                            <textarea class="form-control" id="editAgentDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3" id="editPromptField">
+                            <label for="editAgentPrompt" class="form-label">提示词</label>
+                            <textarea class="form-control" id="editAgentPrompt" rows="5"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">能力</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="editAgentCapabilityInput" placeholder="输入能力">
+                                <button type="button" class="btn btn-outline-secondary" onclick="addEditAgentCapability()">添加</button>
+                            </div>
+                            <div id="editAgentCapabilityList" class="mt-2"></div>
+                            <input type="hidden" id="editAgentCapabilities" value="[]">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">调用模式 *</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="editCallMode" id="editCallModeExternal" value="external_model" checked onchange="toggleCallMode('edit')">
+                                    <label class="form-check-label" for="editCallModeExternal">外部模型 API</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="editCallMode" id="editCallModeHiAgent" value="hi_agent" onchange="toggleCallMode('edit')">
+                                    <label class="form-check-label" for="editCallModeHiAgent">内部 hi-agent 平台</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="editExternalModelFields">
+                            <div class="mb-3">
+                                <label for="editAgentApiKey" class="form-label">API Key <span class="text-muted">(留空使用全局默认)</span></label>
+                                <input type="password" class="form-control" id="editAgentApiKey" placeholder="留空使用全局 API Key">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAgentModelName" class="form-label">模型名称 <span class="text-muted">(留空使用默认模型)</span></label>
+                                <input type="text" class="form-control" id="editAgentModelName" placeholder="例如 Qwen/Qwen3-8B">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAgentMaxTokens" class="form-label">最大输出 Token 数 <span class="text-muted">(默认 1000)</span></label>
+                                <input type="number" class="form-control" id="editAgentMaxTokens" placeholder="1000">
+                            </div>
+                        </div>
+                        <div id="editHiAgentFields" style="display:none;">
+                            <div class="mb-3">
+                                <label for="editAgentHiApiUrl" class="form-label">API URL *</label>
+                                <input type="text" class="form-control" id="editAgentHiApiUrl" placeholder="https://your-hi-agent/api/v1/chat/completions">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAgentHiApiKey" class="form-label">API Key *</label>
+                                <input type="password" class="form-control" id="editAgentHiApiKey">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAgentHiAgentId" class="form-label">Agent ID *</label>
+                                <input type="text" class="form-control" id="editAgentHiAgentId" placeholder="hi-agent 平台中的 Agent ID">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditAgent()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 测试智能体模态框 -->
+    <div class="modal fade" id="testAgentModal" tabindex="-1" aria-labelledby="testAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="testAgentModalLabel">测试智能体</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="testAgentId">
+                    <div class="mb-3">
+                        <label for="testInput" class="form-label">测试输入</label>
+                        <input type="text" class="form-control" id="testInput" placeholder="输入测试内容">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">测试结果</label>
+                        <div id="testResult" class="prompt-preview"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitTestAgent()">测试</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let agentCapabilities = [];
+        let editAgentCapabilities = [];
+        let currentEditModal = null;
+        
+        // API基础URL
+        const API_BASE_URL = 'http://localhost:5001';
+        
+        // 加载智能体列表
+        function loadAgents() {
+            axios.get(`${API_BASE_URL}/api/agents`)
+                .then(response => {
+                    if (response.data.success) {
+                        const agents = response.data.data;
+                        const tableBody = document.getElementById('agentTableBody');
+                        tableBody.innerHTML = '';
+                        
+                        agents.forEach(agent => {
+                            const capabilitiesHtml = agent.capabilities.map(capability =>
+                                `<span class="keyword-tag">${capability}</span>`
+                            ).join('');
+
+                            const sourceLabel = agent.call_mode === 'hi_agent'
+                                ? '<span class="badge bg-info text-dark">hi-agent</span>'
+                                : '<span class="badge bg-secondary">外部 API</span>';
+
+                            const row = `
+                                <tr>
+                                    <td>${agent.id}</td>
+                                    <td>${agent.name}</td>
+                                    <td>${agent.description || '-'}</td>
+                                    <td>${capabilitiesHtml || '-'}</td>
+                                    <td>${sourceLabel}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <a onclick="editAgent('${agent.id}')">编辑</a>
+                                            <a onclick="testAgent('${agent.id}')">测试</a>
+                                            <a onclick="deleteAgent('${agent.id}')">删除</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            tableBody.innerHTML += row;
+                        });
+                    } else {
+                        alert('加载智能体失败: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载智能体失败:', error);
+                    alert('加载智能体失败');
+                });
+        }
+        
+        // 添加智能体能力
+        function addAgentCapability() {
+            const input = document.getElementById('agentCapabilityInput');
+            const capability = input.value.trim();
+            if (capability && !agentCapabilities.includes(capability)) {
+                agentCapabilities.push(capability);
+                updateAgentCapabilityList();
+                input.value = '';
+            }
+        }
+        
+        // 更新智能体能力列表
+        function updateAgentCapabilityList() {
+            const list = document.getElementById('agentCapabilityList');
+            list.innerHTML = '';
+            agentCapabilities.forEach((capability, index) => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                tag.innerHTML = `${capability} <button type="button" class="btn-close btn-close-sm" onclick="removeAgentCapability(${index})"></button>`;
+                list.appendChild(tag);
+            });
+            document.getElementById('agentCapabilities').value = JSON.stringify(agentCapabilities);
+        }
+        
+        // 移除智能体能力
+        function removeAgentCapability(index) {
+            agentCapabilities.splice(index, 1);
+            updateAgentCapabilityList();
+        }
+        
+        // 添加编辑智能体能力
+        function addEditAgentCapability() {
+            const input = document.getElementById('editAgentCapabilityInput');
+            const capability = input.value.trim();
+            if (capability && !editAgentCapabilities.includes(capability)) {
+                editAgentCapabilities.push(capability);
+                updateEditAgentCapabilityList();
+                input.value = '';
+            }
+        }
+        
+        // 更新编辑智能体能力列表
+        function updateEditAgentCapabilityList() {
+            const list = document.getElementById('editAgentCapabilityList');
+            list.innerHTML = '';
+            editAgentCapabilities.forEach((capability, index) => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                tag.innerHTML = `${capability} <button type="button" class="btn-close btn-close-sm" onclick="removeEditAgentCapability(${index})"></button>`;
+                list.appendChild(tag);
+            });
+            document.getElementById('editAgentCapabilities').value = JSON.stringify(editAgentCapabilities);
+        }
+        
+        // 移除编辑智能体能力
+        function removeEditAgentCapability(index) {
+            editAgentCapabilities.splice(index, 1);
+            updateEditAgentCapabilityList();
+        }
+        
+        // 提交创建智能体
+        function submitCreateAgent() {
+            const id = document.getElementById('agentId').value.trim() || generateUUID();
+            const name = document.getElementById('agentName').value.trim();
+            const description = document.getElementById('agentDescription').value.trim();
+            const prompt = document.getElementById('agentPrompt').value.trim();
+            const capabilities = JSON.parse(document.getElementById('agentCapabilities').value);
+
+            if (!name) {
+                alert('智能体名称不能为空');
+                return;
+            }
+
+            const callMode = document.querySelector('input[name="callMode"]:checked').value;
+            const payload = {
+                id: id,
+                name: name,
+                description: description,
+                prompt: prompt,
+                capabilities: capabilities,
+                call_mode: callMode
+            };
+
+            if (callMode === 'external_model') {
+                payload.api_key = document.getElementById('agentApiKey').value.trim() || undefined;
+                payload.model_name = document.getElementById('agentModelName').value.trim() || undefined;
+                payload.max_tokens = parseInt(document.getElementById('agentMaxTokens').value) || 1000;
+            } else {
+                payload.api_url = document.getElementById('agentHiApiUrl').value.trim();
+                payload.api_key = document.getElementById('agentHiApiKey').value.trim();
+                payload.hi_agent_id = document.getElementById('agentHiAgentId').value.trim();
+                payload.max_tokens = 1000;
+                if (!payload.api_url || !payload.api_key || !payload.hi_agent_id) {
+                    alert('hi-agent模式需要填写 API URL、API Key 和 Agent ID');
+                    return;
+                }
+            }
+
+            const createModalElement = document.getElementById('createAgentModal');
+
+            axios.post(`${API_BASE_URL}/api/agents`, payload)
+            .then(response => {
+                if (response.data.success) {
+                    alert('智能体创建成功');
+                    document.getElementById('createAgentForm').reset();
+                    agentCapabilities = [];
+                    updateAgentCapabilityList();
+                    const createModal = bootstrap.Modal.getInstance(createModalElement);
+                    if (createModal) {
+                        createModal.hide();
+                    }
+                    loadAgents();
+                } else {
+                    alert('智能体创建失败: ' + response.data.error);
+                    const createModal = bootstrap.Modal.getInstance(createModalElement);
+                    if (createModal) {
+                        createModal.hide();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('创建智能体失败:', error);
+                console.error('错误详情:', error.response);
+                alert('创建智能体失败: ' + (error.message || '未知错误'));
+                const createModal = bootstrap.Modal.getInstance(createModalElement);
+                if (createModal) {
+                    createModal.hide();
+                }
+            });
+        }
+        
+        // 编辑智能体
+        function editAgent(agentId) {
+            axios.get(`${API_BASE_URL}/api/agents/${agentId}`)
+                .then(response => {
+                    if (response.data.success) {
+                        const agent = response.data.data;
+                        document.getElementById('editAgentId').value = agent.id;
+                        document.getElementById('editAgentIdInput').value = agent.id;
+                        document.getElementById('editAgentName').value = agent.name;
+                        document.getElementById('editAgentDescription').value = agent.description;
+                        document.getElementById('editAgentPrompt').value = agent.prompt;
+
+                        editAgentCapabilities = agent.capabilities || [];
+                        updateEditAgentCapabilityList();
+
+                        // 调用模式
+                        const callMode = agent.call_mode || 'external_model';
+                        if (callMode === 'hi_agent') {
+                            document.getElementById('editCallModeHiAgent').checked = true;
+                        } else {
+                            document.getElementById('editCallModeExternal').checked = true;
+                        }
+                        toggleCallMode('edit');
+                        document.getElementById('editAgentApiKey').value = (callMode === 'external_model' ? (agent.api_key || '') : '');
+                        document.getElementById('editAgentModelName').value = agent.model_name || '';
+                        document.getElementById('editAgentMaxTokens').value = agent.max_tokens || 1000;
+                        document.getElementById('editAgentHiApiUrl').value = agent.api_url || '';
+                        document.getElementById('editAgentHiApiKey').value = (callMode === 'hi_agent' ? (agent.api_key || '') : '');
+                        document.getElementById('editAgentHiAgentId').value = agent.hi_agent_id || '';
+
+                        currentEditModal = new bootstrap.Modal(document.getElementById('editAgentModal'));
+                        currentEditModal.show();
+                    } else {
+                        alert('获取智能体信息失败: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取智能体信息失败:', error);
+                    console.error('错误详情:', error.response);
+                    alert('获取智能体信息失败: ' + (error.message || '未知错误'));
+                });
+        }
+        
+        // 提交编辑智能体
+        function submitEditAgent() {
+            const id = document.getElementById('editAgentId').value;
+            const name = document.getElementById('editAgentName').value.trim();
+            const description = document.getElementById('editAgentDescription').value.trim();
+            const prompt = document.getElementById('editAgentPrompt').value.trim();
+            const capabilities = JSON.parse(document.getElementById('editAgentCapabilities').value);
+
+            if (!name) {
+                alert('智能体名称不能为空');
+                return;
+            }
+
+            const callMode = document.querySelector('input[name="editCallMode"]:checked').value;
+            const payload = {
+                name: name,
+                description: description,
+                prompt: prompt,
+                capabilities: capabilities,
+                call_mode: callMode
+            };
+
+            if (callMode === 'external_model') {
+                payload.api_key = document.getElementById('editAgentApiKey').value.trim() || undefined;
+                payload.model_name = document.getElementById('editAgentModelName').value.trim() || undefined;
+                payload.max_tokens = parseInt(document.getElementById('editAgentMaxTokens').value) || 1000;
+                payload.api_url = undefined;
+                payload.hi_agent_id = undefined;
+            } else {
+                payload.api_url = document.getElementById('editAgentHiApiUrl').value.trim();
+                payload.api_key = document.getElementById('editAgentHiApiKey').value.trim();
+                payload.hi_agent_id = document.getElementById('editAgentHiAgentId').value.trim();
+                payload.model_name = undefined;
+                payload.max_tokens = 1000;
+                if (!payload.api_url || !payload.api_key || !payload.hi_agent_id) {
+                    alert('hi-agent模式需要填写 API URL、API Key 和 Agent ID');
+                    return;
+                }
+            }
+
+            axios.put(`${API_BASE_URL}/api/agents/${id}`, payload)
+            .then(response => {
+                if (response.data.success) {
+                    alert('智能体更新成功');
+                    if (currentEditModal) {
+                        currentEditModal.hide();
+                        currentEditModal = null;
+                    }
+                    loadAgents();
+                } else {
+                    alert('智能体更新失败: ' + response.data.error);
+                    if (currentEditModal) {
+                        currentEditModal.hide();
+                        currentEditModal = null;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('更新智能体失败:', error);
+                console.error('错误详情:', error.response);
+                alert('更新智能体失败: ' + (error.message || '未知错误'));
+                if (currentEditModal) {
+                    currentEditModal.hide();
+                    currentEditModal = null;
+                }
+            });
+        }
+        
+        // 测试智能体
+        function testAgent(agentId) {
+            document.getElementById('testAgentId').value = agentId;
+            document.getElementById('testInput').value = '';
+            document.getElementById('testResult').innerHTML = '';
+            const testModal = new bootstrap.Modal(document.getElementById('testAgentModal'));
+            testModal.show();
+        }
+        
+        // 提交测试智能体
+        function submitTestAgent() {
+            const agentId = document.getElementById('testAgentId').value;
+            const testInput = document.getElementById('testInput').value.trim();
+            
+            if (!testInput) {
+                alert('测试输入不能为空');
+                return;
+            }
+            
+            document.getElementById('testResult').innerHTML = '测试中...';
+            
+            axios.post(`${API_BASE_URL}/api/agents/${agentId}/test`, {
+                input: testInput
+            })
+            .then(response => {
+                if (response.data.success) {
+                    document.getElementById('testResult').innerHTML = response.data.data.response;
+                } else {
+                    document.getElementById('testResult').innerHTML = '测试失败: ' + response.data.error;
+                }
+            })
+            .catch(error => {
+                console.error('测试智能体失败:', error);
+                document.getElementById('testResult').innerHTML = '测试失败: ' + error.message;
+            });
+        }
+        
+        // 删除智能体
+        function deleteAgent(agentId) {
+            if (confirm('确定要删除这个智能体吗？')) {
+                axios.delete(`${API_BASE_URL}/api/agents/${agentId}`)
+                    .then(response => {
+                        if (response.data.success) {
+                            alert('智能体删除成功');
+                            loadAgents();
+                        } else {
+                            alert('智能体删除失败: ' + response.data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('删除智能体失败:', error);
+                        alert('删除智能体失败');
+                    });
+            }
+        }
+        
+        // 生成UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAgents();
+        });
+
+        // 切换调用模式显示
+        function toggleCallMode(prefix) {
+            const p = prefix || '';
+            const externalRadio = document.getElementById(p + 'CallModeExternal');
+            const externalFields = document.getElementById(p + 'ExternalModelFields');
+            const hiAgentFields = document.getElementById(p + 'HiAgentFields');
+            const promptField = document.getElementById(p + 'PromptField');
+
+            if (externalRadio && externalRadio.checked) {
+                externalFields.style.display = 'block';
+                hiAgentFields.style.display = 'none';
+                if (promptField) promptField.style.display = 'block';
+            } else {
+                externalFields.style.display = 'none';
+                hiAgentFields.style.display = 'block';
+                if (promptField) promptField.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

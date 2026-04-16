@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意图识别调试 - 管理后台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            background: #1B2537;
+            color: white;
+            padding-top: 24px;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+        .sidebar h3 {
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+        }
+        .sidebar a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            display: block;
+            padding: 12px 24px;
+            margin: 2px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .sidebar a:hover {
+            background-color: rgba(255,255,255,0.06);
+            color: white;
+        }
+        .content {
+            margin-left: 240px;
+            padding: 32px;
+            background-color: #F7F8FA;
+            min-height: 100vh;
+        }
+        .active {
+            background-color: rgba(196, 18, 48, 0.15);
+            color: #F87171;
+            border-left: 3px solid #C41230;
+            border-radius: 0 6px 6px 0;
+            margin-left: 0;
+            padding-left: 21px;
+            font-weight: 500;
+        }
+        .header-section {
+            background: white;
+            padding: 28px 32px;
+            border-radius: 8px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 15px;
+            font-size: 1.75rem;
+        }
+        .lead {
+            color: #6B7280;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #E8EAED;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .btn-primary {
+            background: #C41230;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: #A0102A;
+            box-shadow: 0 2px 8px rgba(196, 18, 48, 0.2);
+        }
+        .message {
+            margin-bottom: 16px;
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-message {
+            background: #C41230;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 2px;
+        }
+        .system-message {
+            background: white;
+            color: #1F2937;
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .result-container {
+            background: #FFF5F5;
+            border-left: 3px solid #C41230;
+            padding: 14px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .result-item {
+            margin: 6px 0;
+            padding: 8px 10px;
+            background: white;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #9E0F28;
+            margin-right: 8px;
+        }
+        .loading-message {
+            background: white;
+            color: #1F2937;
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .loading-message .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #E8EAED;
+            border-top: 2px solid #C41230;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-message .loading-text {
+            color: #6B7280;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="text-center mb-4">管理后台</h3>
+        <a href="/admin">首页</a>
+        <a href="/admin/scene-intent">场景和意图管理</a>
+        <a href="/admin/agents">智能体管理</a>
+        <a href="/admin/debug" class="active">意图识别调试</a>
+        <a href="/">用户端</a>
+    </div>
+    
+    <div class="content">
+        <h1>意图识别调试</h1>
+        <p class="lead">输入内容后，系统将返回意图识别的结果，包括场景、意图和智能体信息。</p>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="chat-container" id="chatContainer" style="height: 400px; overflow-y: auto; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <!-- 消息将在这里动态添加 -->
+                </div>
+                
+                <div class="input-section mt-4">
+                    <div class="input-group">
+                        <input type="text" id="userInput" class="form-control" placeholder="请输入您的问题，例如：查询贵州茅台的股票信息">
+                        <button class="btn btn-primary" onclick="debugIntent()">调试</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addMessage(message, isUser = false) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isUser ? 'message user-message' : 'message system-message';
+            messageDiv.innerHTML = `
+                <div style="word-wrap: break-word; line-height: 1.4;">${message}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 4px;">${new Date().toLocaleTimeString()}</div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return messageDiv;
+        }
+
+        function addLoadingMessage(text) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message loading-message';
+            messageDiv.id = 'loadingMsg';
+            messageDiv.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">${text}</div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function updateLoadingText(text) {
+            const el = document.getElementById('loadingText');
+            if (el) el.textContent = text;
+        }
+
+        function removeLoadingMessage() {
+            const el = document.getElementById('loadingMsg');
+            if (el) el.remove();
+        }
+
+        function addResult(result) {
+            const chatContainer = document.getElementById('chatContainer');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result-container';
+
+            let resultHTML = `
+                <div class="result-item"><span class="result-label">场景:</span>${result.scene_name || '无'}</div>
+                <div class="result-item"><span class="result-label">意图:</span>${result.intent_name || '无'}</div>
+                <div class="result-item"><span class="result-label">Agent ID:</span>${result.agent_id || '无'}</div>
+                <div class="result-item"><span class="result-label">Agent名称:</span>${result.agent_name || '无'}</div>
+                <div class="result-item"><span class="result-label">识别方法:</span>${result.recognition_method === 'embedding' ? 'Embedding向量匹配' : 'LLM推理'}</div>
+                <div class="result-item"><span class="result-label">置信度:</span>${result.confidence ? (result.confidence * 100).toFixed(2) + '%' : '无'}</div>
+            `;
+
+            resultDiv.innerHTML = resultHTML;
+            chatContainer.appendChild(resultDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function debugIntent() {
+            const userInput = document.getElementById('userInput').value.trim();
+
+            if (!userInput) {
+                alert('请输入内容');
+                return;
+            }
+
+            addMessage(userInput, true);
+            document.getElementById('userInput').value = '';
+
+            addLoadingMessage('正在分析意图...');
+
+            axios.post('/api/debug/recognize', {
+                input: userInput
+            })
+            .then(response => {
+                removeLoadingMessage();
+                if (response.data.success) {
+                    addResult(response.data);
+                } else {
+                    addMessage(`识别失败：${response.data.error}`, false);
+                }
+            })
+            .catch(error => {
+                removeLoadingMessage();
+                addMessage(`请求失败：${error.message}`, false);
+            });
+        }
+        
+        // 按Enter键发送消息
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                debugIntent();
+            }
+        });
+        
+        // 初始化欢迎消息
+        window.onload = function() {
+            addMessage('你好！这是意图识别调试工具，输入内容后将返回意图识别的结果。', false);
+        };
+    </script>
+</body>
+</html>

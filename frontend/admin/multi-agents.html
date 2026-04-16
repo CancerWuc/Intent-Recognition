@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多智能体管理 - 意图识别系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            background: #1B2537;
+            color: white;
+            padding-top: 24px;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+        .sidebar h3 {
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+        }
+        .sidebar a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            display: block;
+            padding: 12px 24px;
+            margin: 2px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .sidebar a:hover {
+            background-color: rgba(255,255,255,0.06);
+            color: white;
+        }
+        .content {
+            margin-left: 240px;
+            padding: 32px;
+            background-color: #F7F8FA;
+            min-height: 100vh;
+        }
+        .active {
+            background-color: rgba(196, 18, 48, 0.15);
+            color: #F87171;
+            border-left: 3px solid #C41230;
+            border-radius: 0 6px 6px 0;
+            margin-left: 0;
+            padding-left: 21px;
+            font-weight: 500;
+        }
+        .header-section {
+            background: white;
+            padding: 28px 32px;
+            border-radius: 8px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 15px;
+            font-size: 1.75rem;
+        }
+        .lead {
+            color: #6B7280;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 28px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #E8EAED;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .card-body {
+            padding: 24px;
+        }
+        .card-title {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 12px;
+            font-size: 1.15rem;
+        }
+        .card-description {
+            color: #6B7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .card-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background: #F7F8FA;
+            border-radius: 6px;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1F2937;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6B7280;
+            margin-top: 4px;
+        }
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .default-badge {
+            background: #C41230;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .inactive-badge {
+            background: #9CA3AF;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #C41230;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: #A0102A;
+            box-shadow: 0 2px 8px rgba(196, 18, 48, 0.2);
+        }
+        .btn-outline-primary {
+            border: 1px solid #C41230;
+            color: #C41230;
+            background: transparent;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-primary:hover {
+            background: #C41230;
+            color: white;
+            border-color: #C41230;
+        }
+        .btn-outline-danger {
+            border: 1px solid #DC2626;
+            color: #DC2626;
+            background: transparent;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-danger:hover {
+            background: #DC2626;
+            color: white;
+            border-color: #DC2626;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        .dropdown-menu {
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            border: 1px solid #E8EAED;
+        }
+        .dropdown-item {
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            font-size: 14px;
+        }
+        .dropdown-item:hover {
+            background-color: #FAFBFC;
+            color: #C41230;
+        }
+        .icon-display {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #C41230, #A0102A);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 16px;
+            color: white;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .content {
+                margin-left: 0;
+                padding: 20px;
+            }
+            .card-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="text-center mb-4">管理后台</h3>
+        <a href="index.html">首页</a>
+        <a href="multi-agents.html" class="active">多智能体管理</a>
+        <a href="scene-intent.html">场景和意图管理</a>
+        <a href="agents.html">智能体管理</a>
+        <a href="debug.html">意图识别调试</a>
+        <a href="../index.html">用户端</a>
+    </div>
+    
+    <div class="content">
+        <div class="header-section d-flex justify-content-between align-items-center">
+            <div>
+                <h1>多智能体管理</h1>
+                <p class="lead">管理不同的多智能体系统，每个多智能体包含独立的场景、意图和智能体配置。</p>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createMultiAgentModal">
+                创建多智能体
+            </button>
+        </div>
+        
+        <div class="card-container" id="multiAgentsContainer">
+            <!-- Multi-Agent卡片将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <!-- 创建Multi-Agent模态框 -->
+    <div class="modal fade" id="createMultiAgentModal" tabindex="-1" aria-labelledby="createMultiAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createMultiAgentModalLabel">创建多智能体</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createMultiAgentForm">
+                        <div class="mb-3">
+                            <label for="multiAgentId" class="form-label">Multi-Agent ID</label>
+                            <input type="text" class="form-control" id="multiAgentId" placeholder="自动生成">
+                        </div>
+                        <div class="mb-3">
+                            <label for="multiAgentName" class="form-label">名称 *</label>
+                            <input type="text" class="form-control" id="multiAgentName" required placeholder="例如：金融咨询系统">
+                        </div>
+                        <div class="mb-3">
+                            <label for="multiAgentDescription" class="form-label">描述</label>
+                            <textarea class="form-control" id="multiAgentDescription" rows="3" placeholder="描述这个多智能体系统的用途..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="multiAgentIcon" class="form-label">图标</label>
+                            <input type="text" class="form-control" id="multiAgentIcon" placeholder="emoji或图标URL，例如：🤖 或 https://...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="multiAgentColor" class="form-label">主题色</label>
+                            <input type="color" class="form-control" id="multiAgentColor" value="#C41230" style="height: 40px;">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="multiAgentDefault">
+                                <label class="form-check-label" for="multiAgentDefault">设为默认</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreateMultiAgent()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑Multi-Agent模态框 -->
+    <div class="modal fade" id="editMultiAgentModal" tabindex="-1" aria-labelledby="editMultiAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMultiAgentModalLabel">编辑多智能体</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMultiAgentForm">
+                        <input type="hidden" id="editMultiAgentId">
+                        <div class="mb-3">
+                            <label for="editMultiAgentName" class="form-label">名称 *</label>
+                            <input type="text" class="form-control" id="editMultiAgentName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMultiAgentDescription" class="form-label">描述</label>
+                            <textarea class="form-control" id="editMultiAgentDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMultiAgentIcon" class="form-label">图标</label>
+                            <input type="text" class="form-control" id="editMultiAgentIcon">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMultiAgentColor" class="form-label">主题色</label>
+                            <input type="color" class="form-control" id="editMultiAgentColor" style="height: 40px;">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editMultiAgentDefault">
+                                <label class="form-check-label" for="editMultiAgentDefault">设为默认</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editMultiAgentActive" checked>
+                                <label class="form-check-label" for="editMultiAgentActive">启用</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditMultiAgent()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:5001';
+        
+        let multiAgents = [];
+        
+        function loadMultiAgents() {
+            axios.get(`${API_BASE_URL}/api/multi-agents`)
+                .then(response => {
+                    if (response.data.success) {
+                        multiAgents = response.data.data;
+                        renderMultiAgents();
+                    } else {
+                        alert('加载多智能体失败: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载多智能体失败:', error);
+                    alert('加载多智能体失败');
+                });
+        }
+        
+        function renderMultiAgents() {
+            const container = document.getElementById('multiAgentsContainer');
+            container.innerHTML = '';
+            
+            multiAgents.forEach(ma => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="icon-display" style="background: linear-gradient(135deg, ${ma.color || '#C41230'}, #A0102A);">
+                            ${ma.icon || '🤖'}
+                        </div>
+                        <h5 class="card-title">${ma.name}</h5>
+                        <p class="card-description">${ma.description || '暂无描述'}</p>
+                        <div class="card-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${ma.scene_count || 0}</div>
+                                <div class="stat-label">场景</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${ma.intent_count || 0}</div>
+                                <div class="stat-label">意图</div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            ${ma.is_default ? '<span class="default-badge">默认</span>' : ''}
+                            ${!ma.is_active ? '<span class="inactive-badge">未启用</span>' : ''}
+                        </div>
+                        <div class="card-actions mt-3">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-primary" type="button" id="dropdownMenuButton${ma.id}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    管理
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${ma.id}">
+                                    <li><a class="dropdown-item" href="#" onclick="editMultiAgent('${ma.id}')">编辑</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="setDefault('${ma.id}')">设为默认</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteMultiAgent('${ma.id}')">删除</a></li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewDetails('${ma.id}')">
+                                查看详情
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function submitCreateMultiAgent() {
+            const id = document.getElementById('multiAgentId').value.trim() || generateUUID();
+            const name = document.getElementById('multiAgentName').value.trim();
+            const description = document.getElementById('multiAgentDescription').value.trim();
+            const icon = document.getElementById('multiAgentIcon').value.trim();
+            const color = document.getElementById('multiAgentColor').value;
+            const isDefault = document.getElementById('multiAgentDefault').checked;
+            
+            if (!name) {
+                alert('名称不能为空');
+                return;
+            }
+            
+            axios.post(`${API_BASE_URL}/api/multi-agents`, {
+                id: id,
+                name: name,
+                description: description,
+                icon: icon,
+                color: color,
+                is_default: isDefault
+            })
+            .then(response => {
+                if (response.data.success) {
+                    alert('创建成功');
+                    document.getElementById('createMultiAgentForm').reset();
+                    bootstrap.Modal.getInstance(document.getElementById('createMultiAgentModal')).hide();
+                    loadMultiAgents();
+                } else {
+                    alert('创建失败: ' + response.data.error);
+                }
+            })
+            .catch(error => {
+                console.error('创建失败:', error);
+                alert('创建失败');
+            });
+        }
+        
+        function editMultiAgent(maId) {
+            const ma = multiAgents.find(m => m.id === maId);
+            if (!ma) {
+                alert('Multi-Agent不存在');
+                return;
+            }
+            
+            document.getElementById('editMultiAgentId').value = ma.id;
+            document.getElementById('editMultiAgentName').value = ma.name;
+            document.getElementById('editMultiAgentDescription').value = ma.description || '';
+            document.getElementById('editMultiAgentIcon').value = ma.icon || '';
+            document.getElementById('editMultiAgentColor').value = ma.color || '#C41230';
+            document.getElementById('editMultiAgentDefault').checked = ma.is_default;
+            document.getElementById('editMultiAgentActive').checked = ma.is_active;
+            
+            new bootstrap.Modal(document.getElementById('editMultiAgentModal')).show();
+        }
+        
+        function submitEditMultiAgent() {
+            const id = document.getElementById('editMultiAgentId').value;
+            const name = document.getElementById('editMultiAgentName').value.trim();
+            const description = document.getElementById('editMultiAgentDescription').value.trim();
+            const icon = document.getElementById('editMultiAgentIcon').value.trim();
+            const color = document.getElementById('editMultiAgentColor').value;
+            const isDefault = document.getElementById('editMultiAgentDefault').checked;
+            const isActive = document.getElementById('editMultiAgentActive').checked;
+            
+            if (!name) {
+                alert('名称不能为空');
+                return;
+            }
+            
+            axios.put(`${API_BASE_URL}/api/multi-agents/${id}`, {
+                name: name,
+                description: description,
+                icon: icon,
+                color: color,
+                is_default: isDefault,
+                is_active: isActive
+            })
+            .then(response => {
+                if (response.data.success) {
+                    alert('保存成功');
+                    bootstrap.Modal.getInstance(document.getElementById('editMultiAgentModal')).hide();
+                    loadMultiAgents();
+                } else {
+                    alert('保存失败: ' + response.data.error);
+                }
+            })
+            .catch(error => {
+                console.error('保存失败:', error);
+                alert('保存失败');
+            });
+        }
+        
+        function setDefault(maId) {
+            if (!confirm('确定要设为默认Multi-Agent吗？')) {
+                return;
+            }
+            
+            axios.post(`${API_BASE_URL}/api/multi-agents/${maId}/set-default`)
+                .then(response => {
+                    if (response.data.success) {
+                        alert('设置成功');
+                        loadMultiAgents();
+                    } else {
+                        alert('设置失败: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('设置失败:', error);
+                    alert('设置失败');
+                });
+        }
+        
+        function deleteMultiAgent(maId) {
+            if (!confirm('确定要删除这个Multi-Agent吗？这将同时删除其下所有场景和意图。')) {
+                return;
+            }
+            
+            axios.delete(`${API_BASE_URL}/api/multi-agents/${maId}`)
+                .then(response => {
+                    if (response.data.success) {
+                        alert('删除成功');
+                        loadMultiAgents();
+                    } else {
+                        alert('删除失败: ' + response.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('删除失败:', error);
+                    alert('删除失败');
+                });
+        }
+        
+        function viewDetails(maId) {
+            window.location.href = `multi-agent-detail.html?id=${maId}`;
+        }
+        
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMultiAgents();
+        });
+    </script>
+</body>
+</html>

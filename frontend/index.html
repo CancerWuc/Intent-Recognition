@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iservice智能客服助手</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">会话列表</div>
+                <button class="new-chat-btn" onclick="createNewChat()">新建对话</button>
+            </div>
+            <div class="session-list" id="sessionList">
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="header">
+                <h1>iservice智能客服助手</h1>
+                <div class="session-info">
+                    <div class="multi-agent-selector">
+                        <label for="multiAgentSelect">选择服务：</label>
+                        <select id="multiAgentSelect" class="multi-agent-select">
+                            <option value="">加载中...</option>
+                        </select>
+                    </div>
+                    <div class="session-actions">
+                        <button class="session-btn" onclick="clearSession()">清空当前会话</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-container" id="chatContainer">
+            </div>
+            
+            <div class="input-section">
+                <div class="input-container">
+                    <input id="userInput" placeholder="请输入您的问题，例如：查询贵州茅台的股票信息" />
+                    <button id="sendBtn" onclick="recognize()">发送</button>
+                    <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">停止</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
