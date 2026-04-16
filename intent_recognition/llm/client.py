@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 from typing import Dict, Any, Optional, List
@@ -6,14 +7,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_BASE_URL = os.getenv('LLM_BASE_URL', 'https://api.siliconflow.cn/v1/chat/completions')
+DEFAULT_CHAT_MODEL = os.getenv('LLM_CHAT_MODEL', 'Qwen/Qwen3-8B')
+DEFAULT_EMBEDDING_MODEL = os.getenv('LLM_EMBEDDING_MODEL', 'BAAI/bge-m3')
+
 
 class LLMClient:
     """
     大模型客户端 - 用于调用SiliconFlow API
     """
 
-    # def __init__(self, api_key: str, base_url: str = "https://api.siliconflow.cn/v1/chat/completions"):
-    def __init__(self, api_key: str, base_url: str = "http://ai-api.citicsinfo.com/v1/chat/completions"):
+    def __init__(self, api_key: str, base_url: str = None):
         """
         初始化大模型客户端
         
@@ -22,15 +26,14 @@ class LLMClient:
             base_url: API地址
         """
         self.api_key = api_key
-        self.base_url = base_url
+        self.base_url = base_url or DEFAULT_BASE_URL
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}"
         }
 
     def chat_completion(self, messages: List[Dict],
-                        model: str = "qwen3-32b",
-                        # model: str = "Qwen/Qwen3-8B",
+                        model: str = None,
                         temperature: float = 0.7,
                         max_tokens: int = 1000) -> Optional[Dict]:
         """
@@ -46,7 +49,7 @@ class LLMClient:
             响应结果或None
         """
         payload = {
-            "model": model,
+            "model": model or DEFAULT_CHAT_MODEL,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
@@ -106,8 +109,7 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": model or "qwen3-32b",
-            # "model": model or "Qwen/Qwen3-8B",
+            "model": model or DEFAULT_CHAT_MODEL,
             "messages": messages,
             "temperature": 0.7,
             "max_tokens": max_tokens,
@@ -157,7 +159,7 @@ class LLMClient:
             logger.error(f"流式API调用异常: {e}")
             yield f"data: {_json.dumps({'error': str(e)})}\n\n"
 
-    def get_embedding(self, text: str, model: str = "bge-m3") -> Optional[List[float]]:
+    def get_embedding(self, text: str, model: str = None) -> Optional[List[float]]:
         """
         获取文本的向量表示
 
@@ -171,7 +173,7 @@ class LLMClient:
         embedding_url = self.base_url.replace("/chat/completions", "/embeddings")
 
         payload = {
-            "model": model,
+            "model": model or DEFAULT_EMBEDDING_MODEL,
             "input": text,
             "encoding_format": "float"
         }

@@ -42,3 +42,6 @@ test_cpp_intent_recognition.py
 
 # Flask Session
 flask_session/
+
+# Environment
+.env

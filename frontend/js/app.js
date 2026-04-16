@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = (window.__API_BASE_URL__ !== undefined) ? window.__API_BASE_URL__ : 'http://localhost:5001';
 
 let currentAbortController = null;
 let currentReader = null;

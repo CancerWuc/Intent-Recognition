@@ -17,11 +17,11 @@ load_dotenv()
 app = Flask(__name__)
 
 # 配置数据库
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///intent_recognition.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///intent_recognition.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 配置会话
-app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = 'flask_session'
 app.config['SESSION_PERMANENT'] = False
@@ -38,9 +38,8 @@ CORS(app, resources={
     }
 })
 
-# 从环境变量获取 API Key（也可以直接硬编码，但不推荐）
-# API_KEY = os.getenv('SILICONFLOW_API_KEY', 'sk-kftbagggpnhguxdyhjdxvelbwfueunavrwibngxxiwbfqmnz')
-API_KEY = os.getenv('SILICONFLOW_API_KEY', '1c98b98b-cca1-45c3-a8e5-07f0213950f3')
+API_KEY = os.getenv('SILICONFLOW_API_KEY', '')
+LLM_BASE_URL = os.getenv('LLM_BASE_URL', 'https://api.siliconflow.cn/v1/chat/completions')
 
 # 初始化数据库
 init_db(app)
@@ -50,7 +49,7 @@ with app.app_context():
     load_initial_data(app)
 
 # 初始化 LLM 客户端和路由器
-llm_client = LLMClient(api_key=API_KEY)
+llm_client = LLMClient(api_key=API_KEY, base_url=LLM_BASE_URL)
 router = IntentRouter(llm_client=llm_client)
 app.config['ROUTER'] = router
 
@@ -62,6 +61,20 @@ app.register_blueprint(api_bp)
 
 def _get_router():
     return current_app.config['ROUTER']
+
+@app.route('/api/config')
+def get_config():
+    """返回前端所需的运行时配置"""
+    return jsonify({
+        'api_base_url': os.getenv('API_BASE_URL', '')
+    })
+
+@app.route('/frontend-config.js')
+def frontend_config_js():
+    """为前端页面注入运行时配置，通过 <script src="/frontend-config.js"> 引用"""
+    api_base_url = os.getenv('API_BASE_URL', '')
+    js = f'window.__API_BASE_URL__ = {json.dumps(api_base_url)};'
+    return Response(js, mimetype='application/javascript')
 
 @app.route('/')
 def index():
