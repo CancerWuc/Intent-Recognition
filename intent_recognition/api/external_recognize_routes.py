@@ -1,21 +1,18 @@
 import json
 
-from flask import Blueprint, request, jsonify, current_app, Response
+from flask import Blueprint, request, current_app, Response
 
 from ..database import db, MultiAgent, SessionHistory
+from .response import api_success, api_error, sse_meta, sse_error, sse_done, sse_content
 
 external_recognize_bp = Blueprint('external_recognize', __name__, url_prefix='/multi/agent')
-
-
-def _sse_payload(payload):
-    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
 def _error_stream(message):
     def generate():
         yield b": connected\n\n"
-        yield _sse_payload({'error': message}).encode('utf-8')
-        yield b"data: [DONE]\n\n"
+        yield sse_error(message, code=400).encode('utf-8')
+        yield sse_done().encode('utf-8')
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -115,24 +112,17 @@ def external_recognize():
     multi_agent_id = (data.get('multi_agent_id') or '').strip() or None
 
     if not user_input:
-        return jsonify({
-            'success': False,
-            'error': '请输入内容'
-        }), 400
+        return api_error('请输入内容', code=400)
 
     if multi_agent_id and not MultiAgent.query.get(multi_agent_id):
-        return jsonify({
-            'success': False,
-            'error': 'multi_agent_id对应的Multi-Agent不存在'
-        }), 400
+        return api_error('multi_agent_id对应的Multi-Agent不存在', code=400)
 
     result = current_app.config['ROUTER'].recognize_only(
         user_input,
         multi_agent_id=multi_agent_id
     )
 
-    response = {
-        'success': result.success,
+    response_data = {
         'user_input': user_input,
         'multi_agent_id': multi_agent_id,
         'scene': result.scene_name,
@@ -145,9 +135,9 @@ def external_recognize():
     }
 
     if not result.success:
-        response['error'] = result.error_message
+        return api_error(result.error_message or '意图识别失败', code=400, data=response_data, **response_data)
 
-    return jsonify(response)
+    return api_success(data=response_data, **response_data)
 
 
 @external_recognize_bp.route('/recognize/execute', methods=['POST'])
@@ -198,7 +188,7 @@ def external_recognize_execute_stream():
 
     def generate():
         yield b": connected\n\n"
-        yield _sse_payload(meta_payload).encode('utf-8')
+        yield sse_meta(meta_payload['meta']).encode('utf-8')
         full_response = ""
 
         for chunk in stream_iter:
@@ -212,11 +202,21 @@ def external_recognize_execute_stream():
                                 full_response += chunk_data['content']
                     except json.JSONDecodeError:
                         pass
-                yield chunk.encode('utf-8')
+                if chunk.strip().endswith('[DONE]'):
+                    continue
+                try:
+                    payload = chunk[6:].strip()
+                    chunk_data = json.loads(payload)
+                    if 'content' in chunk_data:
+                        yield sse_content(chunk_data['content']).encode('utf-8')
+                    elif 'error' in chunk_data:
+                        yield sse_error(chunk_data['error'], code=500).encode('utf-8')
+                except json.JSONDecodeError:
+                    yield chunk.encode('utf-8')
             else:
                 yield chunk
 
-        yield b"data: [DONE]\n\n"
+        yield sse_done().encode('utf-8')
         _save_session_history(app, session_id, user_input, full_response, agent)
 
     response = Response(generate(), mimetype='text/event-stream', direct_passthrough=True)

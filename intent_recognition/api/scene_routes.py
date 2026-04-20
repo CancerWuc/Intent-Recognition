@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, current_app
 from ..database import db, Scene, MultiAgent
+from .response import api_success, api_error
 import uuid
 import json
 
@@ -14,56 +15,35 @@ def get_scenes():
         query = query.filter_by(multi_agent_id=multi_agent_id)
     
     scenes = query.order_by(Scene.sort_order.asc(), Scene.created_at.desc()).all()
-    return jsonify({
-        'success': True,
-        'data': [scene.to_dict() for scene in scenes]
-    })
+    return api_success(data=[scene.to_dict() for scene in scenes])
 
 @scene_bp.route('/<scene_id>', methods=['GET'])
 def get_scene(scene_id):
     scene = Scene.query.get(scene_id)
     if not scene:
-        return jsonify({
-            'success': False,
-            'error': '场景不存在'
-        }), 404
+        return api_error('场景不存在', code=404)
     
-    return jsonify({
-        'success': True,
-        'data': scene.to_dict()
-    })
+    return api_success(data=scene.to_dict())
 
 @scene_bp.route('', methods=['POST'])
 def create_scene():
     data = request.json
     
     if not data.get('name'):
-        return jsonify({
-            'success': False,
-            'error': '场景名称不能为空'
-        }), 400
+        return api_error('场景名称不能为空', code=400)
     
     multi_agent_id = data.get('multi_agent_id')
     if not multi_agent_id:
-        return jsonify({
-            'success': False,
-            'error': '缺少multi_agent_id'
-        }), 400
+        return api_error('缺少multi_agent_id', code=400)
     
     multi_agent = MultiAgent.query.get(multi_agent_id)
     if not multi_agent:
-        return jsonify({
-            'success': False,
-            'error': 'Multi-Agent不存在'
-        }), 400
+        return api_error('Multi-Agent不存在', code=400)
     
     scene_id = data.get('id') or str(uuid.uuid4())
     
     if Scene.query.get(scene_id):
-        return jsonify({
-            'success': False,
-            'error': '场景ID已存在'
-        }), 400
+        return api_error('场景ID已存在', code=400)
     
     scene = Scene()
     scene.id = scene_id
@@ -79,19 +59,13 @@ def create_scene():
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'data': scene.to_dict()
-    }), 201
+    return api_success(data=scene.to_dict())
 
 @scene_bp.route('/<scene_id>', methods=['PUT'])
 def update_scene(scene_id):
     scene = Scene.query.get(scene_id)
     if not scene:
-        return jsonify({
-            'success': False,
-            'error': '场景不存在'
-        }), 404
+        return api_error('场景不存在', code=404)
     
     data = request.json
     
@@ -108,10 +82,7 @@ def update_scene(scene_id):
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'data': scene.to_dict()
-    })
+    return api_success(data=scene.to_dict())
 
 @scene_bp.route('/<scene_id>', methods=['DELETE'])
 def delete_scene(scene_id):
@@ -119,10 +90,7 @@ def delete_scene(scene_id):
     from ..database.models import SceneVector, IntentVector
     scene = Scene.query.get(scene_id)
     if not scene:
-        return jsonify({
-            'success': False,
-            'error': '场景不存在'
-        }), 404
+        return api_error('场景不存在', code=404)
     
     intent_ids = [i.id for i in Intent.query.filter_by(scene_id=scene_id).all()]
     for iid in intent_ids:
@@ -135,7 +103,4 @@ def delete_scene(scene_id):
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'message': '场景已删除'
-    })
+    return api_success(data=None, msg='场景已删除')

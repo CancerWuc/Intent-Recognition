@@ -375,15 +375,30 @@
         const API_BASE_URL = (window.__API_BASE_URL__ !== undefined) ? window.__API_BASE_URL__ : 'http://localhost:5001';
         
         let multiAgents = [];
+
+        function getApiData(responseBody) {
+            if (!responseBody || typeof responseBody !== 'object' || Array.isArray(responseBody)) {
+                return null;
+            }
+            return responseBody.data;
+        }
+
+        function getApiMsg(responseBody, fallback = '未知错误') {
+            if (!responseBody || typeof responseBody !== 'object') {
+                return fallback;
+            }
+            return responseBody.msg || fallback;
+        }
         
         function loadMultiAgents() {
             axios.get(`${API_BASE_URL}/api/multi-agents`)
                 .then(response => {
-                    if (response.data.success) {
-                        multiAgents = response.data.data;
+                    if (response.data && response.data.code === 200) {
+                        multiAgents = getApiData(response.data) || [];
                         renderMultiAgents();
                     } else {
-                        alert('加载多智能体失败: ' + response.data.error);
+                        console.error('多智能体列表返回异常:', response.data);
+                        alert('加载多智能体失败: ' + getApiMsg(response.data));
                     }
                 })
                 .catch(error => {
@@ -464,13 +479,13 @@
                 is_default: isDefault
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('创建成功');
                     document.getElementById('createMultiAgentForm').reset();
                     bootstrap.Modal.getInstance(document.getElementById('createMultiAgentModal')).hide();
                     loadMultiAgents();
                 } else {
-                    alert('创建失败: ' + response.data.error);
+                    alert('创建失败: ' + response.data.msg);
                 }
             })
             .catch(error => {
@@ -520,12 +535,12 @@
                 is_active: isActive
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('保存成功');
                     bootstrap.Modal.getInstance(document.getElementById('editMultiAgentModal')).hide();
                     loadMultiAgents();
                 } else {
-                    alert('保存失败: ' + response.data.error);
+                    alert('保存失败: ' + response.data.msg);
                 }
             })
             .catch(error => {
@@ -541,11 +556,11 @@
             
             axios.post(`${API_BASE_URL}/api/multi-agents/${maId}/set-default`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('设置成功');
                         loadMultiAgents();
                     } else {
-                        alert('设置失败: ' + response.data.error);
+                        alert('设置失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -561,11 +576,11 @@
             
             axios.delete(`${API_BASE_URL}/api/multi-agents/${maId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('删除成功');
                         loadMultiAgents();
                     } else {
-                        alert('删除失败: ' + response.data.error);
+                        alert('删除失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {

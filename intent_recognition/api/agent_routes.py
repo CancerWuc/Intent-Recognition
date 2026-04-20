@@ -1,6 +1,7 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, current_app
 from ..database import db, Agent
 from ..llm.client import LLMClient
+from .response import api_success, api_error
 import uuid
 import json
 
@@ -9,42 +10,27 @@ agent_bp = Blueprint('agent', __name__, url_prefix='/api/agents')
 @agent_bp.route('', methods=['GET'])
 def get_agents():
     agents = Agent.query.all()
-    return jsonify({
-        'success': True,
-        'data': [agent.to_dict() for agent in agents]
-    })
+    return api_success(data=[agent.to_dict() for agent in agents])
 
 @agent_bp.route('/<agent_id>', methods=['GET'])
 def get_agent(agent_id):
     agent = Agent.query.get(agent_id)
     if not agent:
-        return jsonify({
-            'success': False,
-            'error': '智能体不存在'
-        }), 404
+        return api_error('智能体不存在', code=404)
     
-    return jsonify({
-        'success': True,
-        'data': agent.to_dict()
-    })
+    return api_success(data=agent.to_dict())
 
 @agent_bp.route('', methods=['POST'])
 def create_agent():
     data = request.json
     
     if not data.get('name'):
-        return jsonify({
-            'success': False,
-            'error': '智能体名称不能为空'
-        }), 400
+        return api_error('智能体名称不能为空', code=400)
     
     agent_id = data.get('id') or str(uuid.uuid4())
     
     if Agent.query.get(agent_id):
-        return jsonify({
-            'success': False,
-            'error': '智能体ID已存在'
-        }), 400
+        return api_error('智能体ID已存在', code=400)
     
     agent = Agent()
     agent.id = agent_id
@@ -65,19 +51,13 @@ def create_agent():
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'data': agent.to_dict()
-    }), 201
+    return api_success(data=agent.to_dict())
 
 @agent_bp.route('/<agent_id>', methods=['PUT'])
 def update_agent(agent_id):
     agent = Agent.query.get(agent_id)
     if not agent:
-        return jsonify({
-            'success': False,
-            'error': '智能体不存在'
-        }), 404
+        return api_error('智能体不存在', code=404)
     
     data = request.json
     
@@ -108,47 +88,32 @@ def update_agent(agent_id):
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'data': agent.to_dict()
-    })
+    return api_success(data=agent.to_dict())
 
 @agent_bp.route('/<agent_id>', methods=['DELETE'])
 def delete_agent(agent_id):
     agent = Agent.query.get(agent_id)
     if not agent:
-        return jsonify({
-            'success': False,
-            'error': '智能体不存在'
-        }), 404
+        return api_error('智能体不存在', code=404)
     
     db.session.delete(agent)
     db.session.commit()
     
     current_app.config['ROUTER'].load_from_database(force=True)
     
-    return jsonify({
-        'success': True,
-        'message': '智能体已删除'
-    })
+    return api_success(data=None, msg='智能体已删除')
 
 @agent_bp.route('/<agent_id>/test', methods=['POST'])
 def test_agent(agent_id):
     agent = Agent.query.get(agent_id)
     if not agent:
-        return jsonify({
-            'success': False,
-            'error': '智能体不存在'
-        }), 404
+        return api_error('智能体不存在', code=404)
     
     data = request.json
     test_input = data.get('input', '')
     
     if not test_input:
-        return jsonify({
-            'success': False,
-            'error': '测试输入不能为空'
-        }), 400
+        return api_error('测试输入不能为空', code=400)
     
     try:
         agent_dict = agent.to_dict()
@@ -160,10 +125,7 @@ def test_agent(agent_id):
             hi_agent_id = agent_dict.get('hi_agent_id')
 
             if not api_url or not api_key:
-                return jsonify({
-                    'success': False,
-                    'error': 'hi-agent模式需要配置API URL和API Key'
-                }), 400
+                return api_error('hi-agent模式需要配置API URL和API Key', code=400)
 
             client = LLMClient(api_key=api_key, base_url=api_url)
             response = client.call_hi_agent(
@@ -183,15 +145,9 @@ def test_agent(agent_id):
                 from app import llm_client
                 response = llm_client.generate(test_input, system_prompt=agent.prompt, model=model_name)
 
-        return jsonify({
-            'success': True,
-            'data': {
-                'input': test_input,
-                'response': response
-            }
+        return api_success(data={
+            'input': test_input,
+            'response': response
         })
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'测试失败: {str(e)}'
-        }), 500
+        return api_error(f'测试失败: {str(e)}', code=500)

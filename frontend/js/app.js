@@ -5,6 +5,20 @@ let currentReader = null;
 let currentSessionId = null;
 let currentMultiAgentId = null;
 
+function getApiData(responseBody) {
+    if (!responseBody || typeof responseBody !== 'object' || Array.isArray(responseBody)) {
+        return null;
+    }
+    return responseBody.data;
+}
+
+function getApiMsg(responseBody, fallback = '未知错误') {
+    if (!responseBody || typeof responseBody !== 'object') {
+        return fallback;
+    }
+    return responseBody.msg || fallback;
+}
+
 function setStreaming(isStreaming) {
     const sendBtn = document.getElementById('sendBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -43,8 +57,8 @@ async function loadMultiAgents() {
         const data = await response.json();
         console.log('[loadMultiAgents] 响应数据:', data);
         
-        if (data.success) {
-            const multiAgents = data.data;
+        if (data && data.code === 200) {
+            const multiAgents = getApiData(data) || [];
             const select = document.getElementById('multiAgentSelect');
             select.innerHTML = '';
             
@@ -94,13 +108,14 @@ async function createNewChat() {
             headers: { 'Content-Type': 'application/json' }
         });
         const data = await response.json();
-        if (data.success) {
-            saveCurrentSessionId(data.session_id);
+        if (data.code === 200) {
+            const payload = data.data || {};
+            saveCurrentSessionId(payload.session_id);
             document.getElementById('chatContainer').innerHTML = '';
             addMessage('你好！我是iservice智能客服助手，请问有什么可以帮助你的？', false);
             loadSessionList();
         } else {
-            alert('创建新会话失败: ' + (data.error || '未知错误'));
+            alert('创建新会话失败: ' + (data.msg || '未知错误'));
         }
     } catch (error) {
         alert('创建新会话失败: ' + error.message);
@@ -111,10 +126,12 @@ async function loadSessionList() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/session/list`);
         const data = await response.json();
-        if (data.success) {
+        if (data.code === 200) {
+            const payload = data.data || {};
+            const sessions = payload.sessions || [];
             const sessionList = document.getElementById('sessionList');
             sessionList.innerHTML = '';
-            data.sessions.forEach(s => {
+            sessions.forEach(s => {
                 const sessionItem = document.createElement('div');
                 sessionItem.className = 'session-item' + (s.session_id === currentSessionId ? ' active' : '');
                 const preview = s.latest_message || '空会话';
@@ -213,19 +230,20 @@ function recognize() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            const method = data.recognition_method === 'embedding' ? 'Embedding向量匹配' : 'LLM推理';
-            const confidence = data.confidence ? (data.confidence * 100).toFixed(1) : '0';
-            updateLoadingText(`识别完成 [${method}, 置信度: ${confidence}%] → 正在调用 Agent: ${data.agent_name || '无'}...`);
+        if (data.code === 200) {
+            const payload = data.data || {};
+            const method = payload.recognition_method === 'embedding' ? 'Embedding向量匹配' : 'LLM推理';
+            const confidence = payload.confidence ? (payload.confidence * 100).toFixed(1) : '0';
+            updateLoadingText(`识别完成 [${method}, 置信度: ${confidence}%] → 正在调用 Agent: ${payload.agent_name || '无'}...`);
 
-            if (!data.agent_id) {
+            if (!payload.agent_id) {
                 removeLoadingMessage();
                 addMessage('识别失败：未找到对应的智能体', false);
                 setStreaming(false);
                 return;
             }
 
-            const msgDiv = addMessage('', false, data.agent_name);
+            const msgDiv = addMessage('', false, payload.agent_name);
             msgDiv.style.display = 'none';
             const contentEl = msgDiv.querySelector('.message-content');
             let firstChunk = true;
@@ -236,7 +254,7 @@ function recognize() {
             return fetch(`${API_BASE_URL}/api/recognize/execute/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ input: userInput, agent_id: data.agent_id, session_id: currentSessionId }),
+                body: JSON.stringify({ input: userInput, agent_id: payload.agent_id, session_id: currentSessionId }),
                 signal: abortController.signal
             }).then(response => {
                 const reader = response.body.getReader();
@@ -268,18 +286,18 @@ function recognize() {
                                 }
                                 try {
                                     const chunk = JSON.parse(payload);
-                                    if (chunk.error) {
+                                    if (chunk.code !== 200) {
                                         removeLoadingMessage();
                                         msgDiv.style.display = '';
-                                        contentEl.textContent += '错误: ' + chunk.error;
+                                        contentEl.textContent += '错误: ' + chunk.msg;
                                         setStreaming(false);
-                                    } else if (chunk.content) {
+                                    } else if (chunk.data && chunk.data.content) {
                                         if (firstChunk) {
                                             firstChunk = false;
                                             removeLoadingMessage();
                                             msgDiv.style.display = '';
                                         }
-                                        contentEl.textContent += chunk.content;
+                                        contentEl.textContent += chunk.data.content;
                                         document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
                                     }
                                 } catch (e) {}
@@ -318,7 +336,7 @@ function recognize() {
             });
         } else {
             removeLoadingMessage();
-            addMessage(`识别失败：${data.error}`, false);
+            addMessage(`识别失败：${data.msg}`, false);
             setStreaming(false);
         }
     })
@@ -346,10 +364,12 @@ async function loadSessionHistory(sessionId) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/session/history?session_id=${sessionId}`);
         const data = await response.json();
-        if (data.success) {
+        if (data.code === 200) {
+            const payload = data.data || {};
+            const history = payload.history || [];
             document.getElementById('chatContainer').innerHTML = '';
-            if (data.history.length > 0) {
-                data.history.forEach(item => {
+            if (history.length > 0) {
+                history.forEach(item => {
                     if (item.user_input) addMessage(item.user_input, true);
                     if (item.response && item.response !== '新会话') addMessage(item.response, false, item.agent_name);
                 });
@@ -373,7 +393,7 @@ async function clearSession() {
                 body: JSON.stringify({ session_id: currentSessionId })
             });
             const data = await response.json();
-            if (data.success) {
+            if (data.code === 200) {
                 document.getElementById('chatContainer').innerHTML = '';
                 addMessage('你好！我是iservice智能客服助手，请问有什么可以帮助你的？', false);
                 loadSessionList();
@@ -399,13 +419,14 @@ async function initApp() {
         });
         const data = await response.json();
         
-        if (data.success) {
-            saveCurrentSessionId(data.session_id);
+        if (data.code === 200) {
+            const payload = data.data || {};
+            saveCurrentSessionId(payload.session_id);
             document.getElementById('chatContainer').innerHTML = '';
             addMessage('你好！我是iservice智能客服助手，请问有什么可以帮助你的？', false);
             loadSessionList();
         } else {
-            console.error('创建新会话失败:', data.error);
+            console.error('创建新会话失败:', data.msg);
             alert('创建新会话失败');
         }
     } else {
@@ -414,7 +435,7 @@ async function initApp() {
         const historyResponse = await fetch(`${API_BASE_URL}/api/session/history?session_id=${savedSessionId}`);
         const historyData = await historyResponse.json();
         
-        if (historyData.success && historyData.history && historyData.history.length > 0) {
+        if (historyData.code === 200 && historyData.data && historyData.data.history && historyData.data.history.length > 0) {
             await loadSessionHistory(savedSessionId);
             loadSessionList();
         } else {
@@ -425,12 +446,13 @@ async function initApp() {
             });
             const data = await response.json();
             
-            if (data.success) {
-                saveCurrentSessionId(data.session_id);
+            if (data.code === 200) {
+                const payload = data.data || {};
+                saveCurrentSessionId(payload.session_id);
                 addMessage('你好！我是iservice智能客服助手，请问有什么可以帮助你的？', false);
                 loadSessionList();
             } else {
-                console.error('创建新会话失败:', data.error);
+                console.error('创建新会话失败:', data.msg);
                 alert('创建新会话失败');
             }
         }

@@ -419,13 +419,13 @@
         function loadSceneInfo() {
             axios.get(`${API_BASE_URL}/api/scenes/${sceneId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const scene = response.data.data;
                         document.getElementById('sceneTitle').textContent = scene.name;
                         document.getElementById('sceneDescription').textContent = scene.description || '暂无描述';
                         document.getElementById('intentSceneId').value = sceneId;
                     } else {
-                        alert('获取场景信息失败: ' + response.data.error);
+                        alert('获取场景信息失败: ' + response.data.msg);
                         window.history.back();
                     }
                 })
@@ -442,12 +442,12 @@
             axios.get(`${API_BASE_URL}/api/intents?scene_id=${sceneId}`)
                 .then(response => {
                     console.log('获取到的响应:', response); // 调试信息
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const intents = response.data.data;
                         console.log('获取到的意图:', intents); // 调试信息
                         renderIntents(intents);
                     } else {
-                        alert('获取意图信息失败: ' + response.data.error);
+                        alert('获取意图信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -460,11 +460,11 @@
         function loadAgents() {
             axios.get(`${API_BASE_URL}/api/agents`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         agents = response.data.data;
                         renderAgentOptions();
                     } else {
-                        alert('获取智能体信息失败: ' + response.data.error);
+                        alert('获取智能体信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -522,7 +522,7 @@
         function editIntent(intentId) {
             axios.get(`${API_BASE_URL}/api/intents/${intentId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const intent = response.data.data;
                         document.getElementById('editIntentId').value = intent.id;
                         document.getElementById('editIntentIdInput').value = intent.id;
@@ -538,7 +538,7 @@
 
                         new bootstrap.Modal(document.getElementById('editIntentModal')).show();
                     } else {
-                        alert('获取意图信息失败: ' + response.data.error);
+                        alert('获取意图信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -555,11 +555,11 @@
             
             axios.delete(`${API_BASE_URL}/api/intents/${intentId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('意图删除成功');
                         loadIntents();
                     } else {
-                        alert('意图删除失败: ' + response.data.error);
+                        alert('意图删除失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -718,7 +718,7 @@
                 agent_id: agentId
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('意图创建成功');
                     document.getElementById('createIntentForm').reset();
                     intentKeywords = [];
@@ -730,7 +730,7 @@
                     }
                     loadIntents();
                 } else {
-                    alert('意图创建失败: ' + response.data.error);
+                    alert('意图创建失败: ' + response.data.msg);
                     if (createModal) {
                         createModal.hide();
                     }
@@ -773,14 +773,14 @@
                 agent_id: agentId
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('意图更新成功');
                     if (editModal) {
                         editModal.hide();
                     }
                     loadIntents();
                 } else {
-                    alert('意图更新失败: ' + response.data.error);
+                    alert('意图更新失败: ' + response.data.msg);
                     if (editModal) {
                         editModal.hide();
                     }

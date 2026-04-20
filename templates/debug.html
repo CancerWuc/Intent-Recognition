@@ -302,10 +302,10 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('loading').style.display = 'none';
-                if (data.success) {
-                    addResult(data);
+                if (data.code === 200) {
+                    addResult(data.data || {});
                 } else {
-                    addMessage(`识别失败：${data.error}`, false);
+                    addMessage(`识别失败：${data.msg}`, false);
                 }
             })
             .catch(error => {

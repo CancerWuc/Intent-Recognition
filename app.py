@@ -6,6 +6,7 @@ from intent_recognition.router.router import IntentRouter
 from intent_recognition.database import db, init_db, load_initial_data
 from intent_recognition.database.models import SessionHistory
 from intent_recognition.api import api_bp
+from intent_recognition.api.response import api_success, api_error, sse_content, sse_error, sse_done
 import os
 import json
 from datetime import datetime
@@ -65,9 +66,11 @@ def _get_router():
 @app.route('/api/config')
 def get_config():
     """返回前端所需的运行时配置"""
-    return jsonify({
-        'api_base_url': os.getenv('API_BASE_URL', '')
-    })
+    api_base_url = os.getenv('API_BASE_URL', '')
+    return api_success(
+        data={'api_base_url': api_base_url},
+        api_base_url=api_base_url
+    )
 
 @app.route('/frontend-config.js')
 def frontend_config_js():
@@ -79,7 +82,7 @@ def frontend_config_js():
 @app.route('/')
 def index():
     """首页 - API 文档和前端访问说明"""
-    return jsonify({
+    payload = {
         'message': 'Intent Recognition API',
         'description': '智能意图识别和 Agent 执行系统',
         'frontend_url': '请访问前端页面：frontend/index.html',
@@ -91,7 +94,8 @@ def index():
             'session_history': 'GET /api/session/history - 获取会话历史',
             'session_clear': 'POST /api/session/clear - 清空会话'
         }
-    })
+    }
+    return api_success(data=payload, **payload)
 
 @app.route('/api/recognize', methods=['POST'])
 def recognize():
@@ -101,16 +105,12 @@ def recognize():
     multi_agent_id = data.get('multi_agent_id')
 
     if not user_input:
-        return jsonify({
-            'success': False,
-            'error': '请输入内容'
-        })
+        return api_error('请输入内容', code=400)
 
     router = _get_router()
     result = router.recognize_only(user_input, multi_agent_id=multi_agent_id)
 
     response = {
-        'success': result.success,
         'user_input': user_input,
         'scene': result.scene_name,
         'intent': result.intent_name,
@@ -122,9 +122,9 @@ def recognize():
     }
 
     if not result.success:
-        response['error'] = result.error_message
+        return api_error(result.error_message or '意图识别失败', code=400, data=response, **response)
 
-    return jsonify(response)
+    return api_success(data=response, **response)
 
 
 @app.route('/api/recognize/execute/stream', methods=['POST'])
@@ -136,15 +136,15 @@ def recognize_execute_stream():
 
     if not agent_id or not user_input:
         def error_gen():
-            yield f"data: {json.dumps({'error': '缺少 agent_id 或 input'}, ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
+            yield sse_error('缺少 agent_id 或 input', code=400).encode('utf-8')
+            yield sse_done().encode('utf-8')
         return Response(error_gen(), mimetype='text/event-stream')
 
     agent = _get_router().registry.get_agent(agent_id)
     if not agent:
         def error_gen():
-            yield f"data: {json.dumps({'error': f'Agent未找到: {agent_id}'}, ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
+            yield sse_error(f'Agent未找到: {agent_id}', code=404).encode('utf-8')
+            yield sse_done().encode('utf-8')
         return Response(error_gen(), mimetype='text/event-stream')
 
     prompt = getattr(agent, 'prompt', '')
@@ -186,8 +186,8 @@ def recognize_execute_stream():
 
         if call_mode == 'hi_agent':
             if not api_url or not api_key:
-                yield f"data: {json.dumps({'error': 'hi-agent模式需要配置API URL和API Key'}, ensure_ascii=False)}\n\n".encode('utf-8')
-                yield b"data: [DONE]\n\n"
+                yield sse_error('hi-agent模式需要配置API URL和API Key', code=400).encode('utf-8')
+                yield sse_done().encode('utf-8')
                 return
             stream_iter = client.call_hi_agent_stream(
                 user_input=user_input,
@@ -217,12 +217,14 @@ def recognize_execute_stream():
                             chunk_data = json.loads(payload)
                             if 'content' in chunk_data:
                                 full_response += chunk_data['content']
+                                yield sse_content(chunk_data['content']).encode('utf-8')
+                            elif 'error' in chunk_data:
+                                yield sse_error(chunk_data['error'], code=500).encode('utf-8')
                     except json.JSONDecodeError:
-                        pass
-                yield chunk.encode('utf-8')
+                        yield chunk.encode('utf-8')
             else:
                 yield chunk
-        yield b"data: [DONE]\n\n"
+        yield sse_done().encode('utf-8')
         
         if session_id and full_response:
             try:
@@ -256,15 +258,11 @@ def debug_recognize():
     multi_agent_id = data.get('multi_agent_id')
     
     if not user_input:
-        return jsonify({
-            'success': False,
-            'error': '请输入内容'
-        })
+        return api_error('请输入内容', code=400)
     
     result = _get_router().recognize_only(user_input, multi_agent_id=multi_agent_id)
     
     response = {
-        'success': result.success,
         'user_input': user_input,
         'scene_name': result.scene_name,
         'intent_name': result.intent_name,
@@ -274,48 +272,56 @@ def debug_recognize():
         'recognition_method': result.metadata.get('recognition_method', 'llm')
     }
     
-    return jsonify(response)
+    if not result.success:
+        return api_error(result.error_message or '意图识别失败', code=400, data=response, **response)
+
+    return api_success(data=response, **response)
 
 # 管理员端路由（已迁移到前端，保留路由以便重定向）
 @app.route('/admin')
 def admin_index():
     """管理员首页 - 重定向到前端"""
-    return jsonify({
+    payload = {
         'message': '管理后台首页已迁移到前端',
         'frontend_url': 'frontend/admin/index.html'
-    })
+    }
+    return api_success(data=payload, **payload)
 
 @app.route('/admin/agents')
 def admin_agents():
     """智能体管理页面 - 重定向到前端"""
-    return jsonify({
+    payload = {
         'message': '智能体管理页面已迁移到前端',
         'frontend_url': 'frontend/admin/agents.html'
-    })
+    }
+    return api_success(data=payload, **payload)
 
 @app.route('/admin/scene-intent')
 def admin_scene_intent():
     """场景和意图管理 - 重定向到前端"""
-    return jsonify({
+    payload = {
         'message': '场景和意图管理页面已迁移到前端',
         'frontend_url': 'frontend/admin/scene-intent.html'
-    })
+    }
+    return api_success(data=payload, **payload)
 
 @app.route('/admin/scene-intent/detail')
 def admin_scene_intent_detail():
     """场景详情页面 - 重定向到前端"""
-    return jsonify({
+    payload = {
         'message': '场景详情页面已迁移到前端',
         'frontend_url': 'frontend/admin/scene-detail.html'
-    })
+    }
+    return api_success(data=payload, **payload)
 
 @app.route('/admin/debug')
 def admin_debug():
     """意图识别调试 - 重定向到前端"""
-    return jsonify({
+    payload = {
         'message': '意图识别调试页面已迁移到前端',
         'frontend_url': 'frontend/admin/debug.html'
-    })
+    }
+    return api_success(data=payload, **payload)
 
 
 
@@ -323,24 +329,24 @@ def admin_debug():
 def get_session_history():
     session_id = request.args.get('session_id')
     if not session_id:
-        return jsonify({'success': False, 'error': '缺少 session_id 参数'})
+        return api_error('缺少 session_id 参数', code=400)
     history = SessionHistory.query.filter_by(session_id=session_id).order_by(SessionHistory.created_at).all()
     history_data = [h.to_dict() for h in history]
-    return jsonify({
-        'success': True,
+    response_data = {
         'session_id': session_id,
         'history': history_data
-    })
+    }
+    return api_success(data=response_data, **response_data)
 
 @app.route('/api/session/clear', methods=['POST'])
 def clear_session():
     data = request.json or {}
     session_id = data.get('session_id')
     if not session_id:
-        return jsonify({'success': False, 'error': '缺少 session_id 参数'})
+        return api_error('缺少 session_id 参数', code=400)
     SessionHistory.query.filter_by(session_id=session_id).delete()
     db.session.commit()
-    return jsonify({'success': True, 'message': '会话历史已清空'})
+    return api_success(data=None, msg='会话历史已清空')
 
 @app.route('/api/session/new', methods=['POST'])
 def create_new_session():
@@ -354,11 +360,11 @@ def create_new_session():
     )
     db.session.add(empty_history)
     db.session.commit()
-    return jsonify({
-        'success': True,
+    response_data = {
         'session_id': session_id,
         'message': '新会话已创建'
-    })
+    }
+    return api_success(data=response_data, session_id=session_id, message='新会话已创建')
 
 @app.route('/api/session/list', methods=['GET'])
 def get_session_list():
@@ -384,9 +390,9 @@ def get_session_list():
                 'created_at': latest_history.created_at.isoformat() if latest_history else None
             })
         sessions.sort(key=lambda x: x['created_at'] if x['created_at'] else '', reverse=True)
-        return jsonify({'success': True, 'sessions': sessions})
+        return api_success(data={'sessions': sessions}, sessions=sessions)
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return api_error(str(e), code=500)
 
 @app.route('/api/session/save_history', methods=['POST'])
 def save_session_history():
@@ -396,9 +402,9 @@ def save_session_history():
     agent_name = data.get('agent_name', '')
     session_id = data.get('session_id')
     if not session_id:
-        return jsonify({'success': False, 'error': '缺少 session_id 参数'})
+        return api_error('缺少 session_id 参数', code=400)
     if not user_input or not response_text:
-        return jsonify({'success': False, 'error': '缺少必要参数'})
+        return api_error('缺少必要参数', code=400)
     placeholder = SessionHistory.query.filter_by(session_id=session_id, user_input='', response='新会话').first()
     if placeholder:
         db.session.delete(placeholder)
@@ -410,7 +416,7 @@ def save_session_history():
     )
     db.session.add(history)
     db.session.commit()
-    return jsonify({'success': True, 'message': '会话历史已保存'})
+    return api_success(data=None, msg='会话历史已保存')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

@@ -240,6 +240,20 @@
         const API_BASE_URL = (window.__API_BASE_URL__ !== undefined) ? window.__API_BASE_URL__ : 'http://localhost:5001';
         let currentMultiAgentId = null;
 
+        function getApiData(responseBody) {
+            if (!responseBody || typeof responseBody !== 'object' || Array.isArray(responseBody)) {
+                return null;
+            }
+            return responseBody.data;
+        }
+
+        function getApiMsg(responseBody, fallback = '未知错误') {
+            if (!responseBody || typeof responseBody !== 'object') {
+                return fallback;
+            }
+            return responseBody.msg || fallback;
+        }
+
         function saveCurrentMultiAgentId(maId) {
             currentMultiAgentId = maId;
             localStorage.setItem('currentMultiAgentId', maId);
@@ -250,8 +264,8 @@
                 const response = await fetch(`${API_BASE_URL}/api/multi-agents`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    const multiAgents = data.data;
+                if (data && data.code === 200) {
+                    const multiAgents = getApiData(data) || [];
                     const select = document.getElementById('multiAgentSelect');
                     select.innerHTML = '';
                     
@@ -281,6 +295,7 @@
                         }
                     }
                 } else {
+                    console.error('多智能体列表返回异常:', data);
                     document.getElementById('multiAgentSelect').innerHTML = '<option value="">加载失败</option>';
                 }
             } catch (error) {
@@ -369,10 +384,10 @@
             })
             .then(response => {
                 removeLoadingMessage();
-                if (response.data.success) {
-                    addResult(response.data);
+                if (response.data && response.data.code === 200) {
+                    addResult(getApiData(response.data) || {});
                 } else {
-                    addMessage(`识别失败：${response.data.error}`, false);
+                    addMessage(`识别失败：${getApiMsg(response.data)}`, false);
                 }
             })
             .catch(error => {

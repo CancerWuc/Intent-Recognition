@@ -372,7 +372,7 @@
                 axios.get(`${API_BASE_URL}/api/scenes?multi_agent_id=${multiAgentId}`)
             ])
             .then(([multiAgentResponse, scenesResponse]) => {
-                if (multiAgentResponse.data.success) {
+                if (multiAgentResponse.data.code === 200) {
                     multiAgent = multiAgentResponse.data.data;
                     document.getElementById('multiAgentTitle').textContent = multiAgent.name;
                     document.getElementById('multiAgentDescription').textContent = multiAgent.description || '暂无描述';
@@ -392,15 +392,15 @@
                         activeBadge.className = 'info-badge inactive-badge';
                     }
                 } else {
-                    alert('加载Multi-Agent信息失败: ' + multiAgentResponse.data.error);
+                    alert('加载Multi-Agent信息失败: ' + multiAgentResponse.data.msg);
                     window.history.back();
                 }
                 
-                if (scenesResponse.data.success) {
+                if (scenesResponse.data.code === 200) {
                     scenes = scenesResponse.data.data;
                     renderScenes();
                 } else {
-                    alert('加载场景失败: ' + scenesResponse.data.error);
+                    alert('加载场景失败: ' + scenesResponse.data.msg);
                 }
             })
             .catch(error => {
@@ -458,12 +458,12 @@
             
             axios.delete(`${API_BASE_URL}/api/scenes/${sceneId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('场景删除成功');
                         scenes = scenes.filter(s => s.id !== sceneId);
                         renderScenes();
                     } else {
-                        alert('场景删除失败: ' + response.data.error);
+                        alert('场景删除失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -551,7 +551,7 @@
                 sort_order: sortOrder
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('场景创建成功');
                     document.getElementById('createSceneForm').reset();
                     keywords = [];
@@ -561,7 +561,7 @@
                     bootstrap.Modal.getInstance(document.getElementById('createSceneModal')).hide();
                     loadMultiAgentInfo();
                 } else {
-                    alert('场景创建失败: ' + response.data.error);
+                    alert('场景创建失败: ' + response.data.msg);
                 }
             })
             .catch(error => {

@@ -458,10 +458,10 @@
                 axios.get(`${API_BASE_URL}/api/agents`)
             ])
             .then(([multiAgents, scenes, intents, agents]) => {
-                document.getElementById('multiAgentCount').textContent = multiAgents.data.success ? multiAgents.data.data.length : 0;
-                document.getElementById('sceneCount').textContent = scenes.data.success ? scenes.data.data.length : 0;
-                document.getElementById('intentCount').textContent = intents.data.success ? intents.data.data.length : 0;
-                document.getElementById('agentCount').textContent = agents.data.success ? agents.data.data.length : 0;
+                document.getElementById('multiAgentCount').textContent = multiAgents.data.code === 200 ? multiAgents.data.data.length : 0;
+                document.getElementById('sceneCount').textContent = scenes.data.code === 200 ? scenes.data.data.length : 0;
+                document.getElementById('intentCount').textContent = intents.data.code === 200 ? intents.data.data.length : 0;
+                document.getElementById('agentCount').textContent = agents.data.code === 200 ? agents.data.data.length : 0;
             })
             .catch(error => {
                 console.error('加载统计数据失败:', error);

@@ -262,6 +262,20 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
+        function getApiData(responseBody) {
+            if (!responseBody || typeof responseBody !== 'object' || Array.isArray(responseBody)) {
+                return null;
+            }
+            return responseBody.data;
+        }
+
+        function getApiMsg(responseBody, fallback = '未知错误') {
+            if (!responseBody || typeof responseBody !== 'object') {
+                return fallback;
+            }
+            return responseBody.msg || fallback;
+        }
+
         function debugIntent() {
             const userInput = document.getElementById('userInput').value.trim();
 
@@ -280,10 +294,10 @@
             })
             .then(response => {
                 removeLoadingMessage();
-                if (response.data.success) {
-                    addResult(response.data);
+                if (response.data && response.data.code === 200) {
+                    addResult(getApiData(response.data) || {});
                 } else {
-                    addMessage(`识别失败：${response.data.error}`, false);
+                    addMessage(`识别失败：${getApiMsg(response.data)}`, false);
                 }
             })
             .catch(error => {

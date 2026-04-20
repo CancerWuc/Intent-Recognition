@@ -499,11 +499,11 @@
         function loadScenes() {
             axios.get('/api/scenes')
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         scenes = response.data.data;
                         renderScenes();
                     } else {
-                        alert('获取场景信息失败: ' + response.data.error);
+                        alert('获取场景信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -516,11 +516,11 @@
         function loadAgents() {
             axios.get('/api/agents')
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         agents = response.data.data;
                         renderAgentOptions();
                     } else {
-                        alert('获取智能体信息失败: ' + response.data.error);
+                        alert('获取智能体信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -567,7 +567,7 @@
         function renderIntents(sceneId) {
             axios.get(`/api/intents?scene_id=${sceneId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const intents = response.data.data;
                         const intentList = document.getElementById(`intentList${sceneId}`);
                         
@@ -665,11 +665,11 @@
             
             axios.delete(`/api/scenes/${sceneId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('场景删除成功');
                         loadScenes();
                     } else {
-                        alert('场景删除失败: ' + response.data.error);
+                        alert('场景删除失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -682,7 +682,7 @@
         function editIntent(intentId) {
             axios.get(`/api/intents/${intentId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const intent = response.data.data;
                         document.getElementById('editIntentId').value = intent.id;
                         document.getElementById('editIntentIdInput').value = intent.id;
@@ -698,7 +698,7 @@
 
                         new bootstrap.Modal(document.getElementById('editIntentModal')).show();
                     } else {
-                        alert('获取意图信息失败: ' + response.data.error);
+                        alert('获取意图信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -715,11 +715,11 @@
             
             axios.delete(`/api/intents/${intentId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         alert('意图删除成功');
                         loadScenes();
                     } else {
-                        alert('意图删除失败: ' + response.data.error);
+                        alert('意图删除失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -1000,7 +1000,7 @@
                 examples: sceneExamples
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('场景创建成功');
                     document.getElementById('createSceneForm').reset();
                     keywords = [];
@@ -1012,7 +1012,7 @@
                     }
                     loadScenes();
                 } else {
-                    alert('场景创建失败: ' + response.data.error);
+                    alert('场景创建失败: ' + response.data.msg);
                     if (createModal) {
                         createModal.hide();
                     }
@@ -1051,14 +1051,14 @@
                 examples: sceneExamples
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('场景更新成功');
                     if (editModal) {
                         editModal.hide();
                     }
                     loadScenes();
                 } else {
-                    alert('场景更新失败: ' + response.data.error);
+                    alert('场景更新失败: ' + response.data.msg);
                     if (editModal) {
                         editModal.hide();
                     }
@@ -1107,7 +1107,7 @@
                 agent_id: agentId
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('意图创建成功');
                     document.getElementById('createIntentForm').reset();
                     intentKeywords = [];
@@ -1119,7 +1119,7 @@
                     }
                     loadScenes();
                 } else {
-                    alert('意图创建失败: ' + response.data.error);
+                    alert('意图创建失败: ' + response.data.msg);
                     if (createModal) {
                         createModal.hide();
                     }
@@ -1167,14 +1167,14 @@
                 agent_id: agentId
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('意图更新成功');
                     if (editModal) {
                         editModal.hide();
                     }
                     loadScenes();
                 } else {
-                    alert('意图更新失败: ' + response.data.error);
+                    alert('意图更新失败: ' + response.data.msg);
                     if (editModal) {
                         editModal.hide();
                     }

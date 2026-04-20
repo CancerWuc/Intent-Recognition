@@ -478,7 +478,7 @@
         function loadAgents() {
             axios.get(`${API_BASE_URL}/api/agents`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const agents = response.data.data;
                         const tableBody = document.getElementById('agentTableBody');
                         tableBody.innerHTML = '';
@@ -511,7 +511,7 @@
                             tableBody.innerHTML += row;
                         });
                     } else {
-                        alert('加载智能体失败: ' + response.data.error);
+                        alert('加载智能体失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -622,7 +622,7 @@
 
             axios.post(`${API_BASE_URL}/api/agents`, payload)
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('智能体创建成功');
                     document.getElementById('createAgentForm').reset();
                     agentCapabilities = [];
@@ -633,7 +633,7 @@
                     }
                     loadAgents();
                 } else {
-                    alert('智能体创建失败: ' + response.data.error);
+                    alert('智能体创建失败: ' + response.data.msg);
                     const createModal = bootstrap.Modal.getInstance(createModalElement);
                     if (createModal) {
                         createModal.hide();
@@ -655,7 +655,7 @@
         function editAgent(agentId) {
             axios.get(`${API_BASE_URL}/api/agents/${agentId}`)
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.code === 200) {
                         const agent = response.data.data;
                         document.getElementById('editAgentId').value = agent.id;
                         document.getElementById('editAgentIdInput').value = agent.id;
@@ -684,7 +684,7 @@
                         currentEditModal = new bootstrap.Modal(document.getElementById('editAgentModal'));
                         currentEditModal.show();
                     } else {
-                        alert('获取智能体信息失败: ' + response.data.error);
+                        alert('获取智能体信息失败: ' + response.data.msg);
                     }
                 })
                 .catch(error => {
@@ -736,7 +736,7 @@
 
             axios.put(`${API_BASE_URL}/api/agents/${id}`, payload)
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     alert('智能体更新成功');
                     if (currentEditModal) {
                         currentEditModal.hide();
@@ -744,7 +744,7 @@
                     }
                     loadAgents();
                 } else {
-                    alert('智能体更新失败: ' + response.data.error);
+                    alert('智能体更新失败: ' + response.data.msg);
                     if (currentEditModal) {
                         currentEditModal.hide();
                         currentEditModal = null;
@@ -787,10 +787,10 @@
                 input: testInput
             })
             .then(response => {
-                if (response.data.success) {
+                if (response.data.code === 200) {
                     document.getElementById('testResult').innerHTML = response.data.data.response;
                 } else {
-                    document.getElementById('testResult').innerHTML = '测试失败: ' + response.data.error;
+                    document.getElementById('testResult').innerHTML = '测试失败: ' + response.data.msg;
                 }
             })
             .catch(error => {
@@ -804,11 +804,11 @@
             if (confirm('确定要删除这个智能体吗？')) {
                 axios.delete(`${API_BASE_URL}/api/agents/${agentId}`)
                     .then(response => {
-                        if (response.data.success) {
+                        if (response.data.code === 200) {
                             alert('智能体删除成功');
                             loadAgents();
                         } else {
-                            alert('智能体删除失败: ' + response.data.error);
+                            alert('智能体删除失败: ' + response.data.msg);
                         }
                     })
                     .catch(error => {
