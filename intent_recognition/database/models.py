@@ -42,6 +42,38 @@ class MultiAgent(db.Model):
         self.is_default = data.get('is_default', False)
         self.is_active = data.get('is_active', True)
 
+
+class MultiAgentsMapping(db.Model):
+    __tablename__ = 'multi_agents_mapping'
+
+    multi_agents_id = db.Column(db.String(50), primary_key=True)
+    multi_agents_key = db.Column(db.String(50), db.ForeignKey('multi_agents.id'), nullable=False)
+    status = db.Column(db.Integer, nullable=False, default=1)
+    description = db.Column(db.Text)
+
+    multi_agent = db.relationship(
+        'MultiAgent',
+        backref=db.backref('mappings', lazy=True, cascade='all, delete-orphan')
+    )
+
+    def to_dict(self):
+        return {
+            'multi_agents_id': self.multi_agents_id,
+            'multi_agents_key': self.multi_agents_key,
+            'status': self.status,
+            'description': self.description
+        }
+
+    def from_dict(self, data):
+        if 'multi_agents_id' in data and data['multi_agents_id'] is not None:
+            self.multi_agents_id = data['multi_agents_id']
+        if 'multi_agents_key' in data:
+            self.multi_agents_key = data.get('multi_agents_key')
+        if 'status' in data:
+            self.status = data.get('status')
+        if 'description' in data:
+            self.description = data.get('description')
+
 class Scene(db.Model):
     __tablename__ = 'scenes'
     

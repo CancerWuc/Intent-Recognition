@@ -1,15 +1,20 @@
-from .models import db, Scene, Intent, Agent, SceneVector, IntentVector, SessionHistory, MultiAgent
+from .models import db, Scene, Intent, Agent, SceneVector, IntentVector, SessionHistory, MultiAgent, MultiAgentsMapping
 import json
+
+def ensure_database_extensions():
+    MultiAgentsMapping.__table__.create(bind=db.engine, checkfirst=True)
 
 def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        ensure_database_extensions()
 
 def reset_db(app):
     with app.app_context():
         db.drop_all()
         db.create_all()
+        ensure_database_extensions()
 
 def load_initial_data(app):
     with app.app_context():

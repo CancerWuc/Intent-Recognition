@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from ..database import db, Scene, Intent, MultiAgent
+from ..database import db, Scene, Intent, MultiAgent, MultiAgentsMapping
 import uuid
 import json
 
@@ -105,6 +105,8 @@ def delete_multi_agent(multi_agent_id):
         }), 404
     
     from ..database.models import SceneVector, IntentVector
+
+    MultiAgentsMapping.query.filter_by(multi_agents_key=multi_agent_id).delete()
     
     scenes = Scene.query.filter_by(multi_agent_id=multi_agent_id).all()
     for scene in scenes:
