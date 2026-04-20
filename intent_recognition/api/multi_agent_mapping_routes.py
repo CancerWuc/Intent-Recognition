@@ -1,3 +1,5 @@
+import uuid
+
 from flask import Blueprint, request
 from ..database import db, MultiAgent, MultiAgentsMapping
 from .response import api_success, api_error
@@ -41,11 +43,8 @@ def get_multi_agent_mapping(multi_agents_id):
 def create_multi_agent_mapping():
     data = _get_request_data()
 
-    multi_agents_id = (data.get('multi_agents_id') or '').strip()
+    multi_agents_id = (data.get('multi_agents_id') or '').strip() or str(uuid.uuid4())
     multi_agents_key = (data.get('multi_agents_key') or '').strip()
-
-    if not multi_agents_id:
-        return api_error('multi_agents_id不能为空', code=400)
 
     if MultiAgentsMapping.query.get(multi_agents_id):
         return api_error('multi_agents_id已存在', code=400)
